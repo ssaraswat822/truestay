@@ -138,7 +138,7 @@ Respond with ONLY a JSON array (no markdown), up to 6 hotels, best match first:
 
     const searched = await callClaude(
       [{ role: "user", content: searchPrompt }],
-      [{ type: "web_search_20250305", name: "web_search" }],
+      [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }],
       6000
     );
     const hotels = parseJSON(extractText(searched), "[", "]");
