@@ -12,8 +12,8 @@
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-sonnet-4-6";
 
-async function callClaude(messages, tools) {
-  const body = { model: MODEL, max_tokens: 1500, messages };
+async function callClaude(messages, tools, maxTokens = 4096) {
+  const body = { model: MODEL, max_tokens: maxTokens, messages };
   if (tools) body.tools = tools;
 
   const res = await fetch(ANTHROPIC_URL, {
@@ -44,7 +44,22 @@ function parseJSON(text, open, close) {
   const clean = text.replace(/```json|```/g, "").trim();
   const s = clean.indexOf(open);
   const e = clean.lastIndexOf(close);
-  return JSON.parse(clean.slice(s, e + 1));
+  const slice = clean.slice(s, e + 1);
+  try {
+    return JSON.parse(slice);
+  } catch (err) {
+    // Common failure: the model's JSON got truncated mid-object (hit the token
+    // limit). For arrays, salvage by trimming back to the last complete object
+    // and re-closing the bracket, so the user still gets results.
+    if (open === "[") {
+      const lastComplete = slice.lastIndexOf("}");
+      if (lastComplete !== -1) {
+        const repaired = slice.slice(0, lastComplete + 1) + "]";
+        return JSON.parse(repaired);
+      }
+    }
+    throw err;
+  }
 }
 
 export async function handler(event) {
@@ -123,7 +138,8 @@ Respond with ONLY a JSON array (no markdown), up to 6 hotels, best match first:
 
     const searched = await callClaude(
       [{ role: "user", content: searchPrompt }],
-      [{ type: "web_search_20250305", name: "web_search" }]
+      [{ type: "web_search_20250305", name: "web_search" }],
+      6000
     );
     const hotels = parseJSON(extractText(searched), "[", "]");
     hotels.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
