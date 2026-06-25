@@ -10,7 +10,7 @@
 // Optional (see comments lower down): GOOGLE_PLACES_API_KEY, AMADEUS_* etc.
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-sonnet-4-6";"
+const MODEL = "claude-sonnet-4-6";
 
 async function callClaude(messages, tools) {
   const body = { model: MODEL, max_tokens: 1500, messages };
